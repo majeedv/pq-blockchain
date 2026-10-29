@@ -1,0 +1,6 @@
+cryptography
+pandas
+scipy
+streamlit
+pytest
+# liboqs-python is added later, once it installs (see README)
