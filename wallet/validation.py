@@ -32,3 +32,6 @@ def process_transaction(sender, receiver, transaction):
     sender.nonce = transaction.nonce
 
     return True, "Transaction successful."
+
+ # only for testing purpose
+ 

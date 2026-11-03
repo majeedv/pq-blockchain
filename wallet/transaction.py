@@ -18,3 +18,6 @@ class Transaction:
         self.algorithm = algorithm
         self.public_key = public_key
         self.signature = signature
+        
+        
+ # only for testing purpose
