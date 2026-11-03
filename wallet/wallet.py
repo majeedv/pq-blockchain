@@ -3,3 +3,5 @@ class Wallet:
         self.wallet_id = wallet_id
         self.balance = balance
         self.nonce = 0
+        
+    # only for testing purpose
