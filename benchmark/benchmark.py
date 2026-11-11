@@ -6,8 +6,10 @@ import platform
 import statistics
 import os
 
+from crypto.signer import get_signer
+
 # Algorithms to benchmark
-ALGORITHMS = ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"]
+ALGORITHMS = ["ECDSA", "ML-DSA-44"]
 
 # Benchmark settings
 WARMUP_RUNS = 20
@@ -16,12 +18,16 @@ BENCHMARK_RUNS = 1000
 MESSAGE = b"Post quantum blockchain benchmark test"
 
 RESULTS_FOLDER = "data"
-RESULTS_FILE = os.path.join(RESULTS_FOLDER, "benchmark_results.csv")
+RESULTS_FILE = os.path.join(
+    RESULTS_FOLDER, "benchmark_results.csv"
+)
 
 
 def benchmark_algorithm(algorithm):
 
     print(f"\nBenchmarking {algorithm}...")
+
+    signer = get_signer(algorithm)
 
     keygen_times = []
     signing_times = []
@@ -33,23 +39,21 @@ def benchmark_algorithm(algorithm):
 
     for run in range(WARMUP_RUNS + BENCHMARK_RUNS):
 
-        signer = oqs.Signature(algorithm)
-
         # Measure key generation
         start = time.perf_counter_ns()
-        public_key = signer.generate_keypair()
+        public_key, private_key = signer.generate_keypair()
         keygen_time = time.perf_counter_ns() - start
 
         # Measure signing
         start = time.perf_counter_ns()
-        signature = signer.sign(MESSAGE)
+        signature = signer.sign(private_key, MESSAGE)
         signing_time = time.perf_counter_ns() - start
 
         # Measure verification
-        verifier = oqs.Signature(algorithm)
-
         start = time.perf_counter_ns()
-        valid = verifier.verify(MESSAGE, signature, public_key)
+        valid = signer.verify(
+            public_key, MESSAGE, signature
+        )
         verification_time = time.perf_counter_ns() - start
 
         if not valid:
@@ -65,10 +69,8 @@ def benchmark_algorithm(algorithm):
             verification_times.append(verification_time)
 
             public_key_size = len(public_key)
+            private_key_size = len(private_key)
             signature_size = len(signature)
-
-        signer.free()
-        verifier.free()
 
     return {
         "algorithm": algorithm,
@@ -76,6 +78,7 @@ def benchmark_algorithm(algorithm):
         "signing_times": signing_times,
         "verification_times": verification_times,
         "public_key_bytes": public_key_size,
+        "private_key_bytes": private_key_size,
         "signature_bytes": signature_size
     }
 
@@ -94,6 +97,7 @@ def save_results(results):
             "run_id",
             "time_ns",
             "pub_key_bytes",
+            "priv_key_bytes",
             "sig_bytes",
             "machine",
             "library_version"
@@ -117,6 +121,7 @@ def save_results(results):
                         run_id,
                         elapsed,
                         result["public_key_bytes"],
+                        result["private_key_bytes"],
                         result["signature_bytes"],
                         platform.platform(),
                         oqs.oqs_python_version()
@@ -141,20 +146,20 @@ def print_summary(results):
 
             values = result[f"{operation}_times"]
 
+            quartiles = statistics.quantiles(values, n=4)
+
             print(f"{operation}:")
             print("  Median:", statistics.median(values), "ns")
-            print("  IQR:", (
-                statistics.quantiles(values, n=4)[2]
-                - statistics.quantiles(values, n=4)[0]
-            ), "ns")
+            print("  IQR:", quartiles[2] - quartiles[0], "ns")
 
         print("  Public key:", result["public_key_bytes"], "bytes")
+        print("  Private key:", result["private_key_bytes"], "bytes")
         print("  Signature:", result["signature_bytes"], "bytes")
 
 
 def main():
 
-    print("POST-QUANTUM SIGNATURE BENCHMARK")
+    print("ECDSA vs POST-QUANTUM SIGNATURE BENCHMARK")
     print("Warm-up runs:", WARMUP_RUNS)
     print("Measured runs:", BENCHMARK_RUNS)
 
@@ -162,15 +167,8 @@ def main():
 
     for algorithm in ALGORITHMS:
 
-        if algorithm not in oqs.get_enabled_sig_mechanisms():
-            print(f"Skipping unavailable algorithm: {algorithm}")
-            continue
-
         result = benchmark_algorithm(algorithm)
         results.append(result)
-
-    if not results:
-        raise RuntimeError("No supported algorithms found.")
 
     save_results(results)
     print_summary(results)
