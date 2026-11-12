@@ -1,3 +1,6 @@
+import json
+
+
 class Transaction:
     def __init__(
         self,
@@ -18,6 +21,24 @@ class Transaction:
         self.algorithm = algorithm
         self.public_key = public_key
         self.signature = signature
-        
-        
- # only for testing purpose
+
+    def to_dict(self):
+        """Return the transaction fields that must be signed."""
+        return {
+            "sender": self.sender,
+            "receiver": self.receiver,
+            "amount": self.amount,
+            "nonce": self.nonce,
+            "timestamp": self.timestamp,
+            "algorithm": self.algorithm,
+        }
+
+    def serialize(self):
+        """Return a canonical JSON representation as UTF-8 bytes."""
+        return json.dumps(
+            self.to_dict(),
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False
+        ).encode("utf-8")

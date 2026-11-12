@@ -1,19 +1,34 @@
+
 from wallet.wallet import Wallet
 from wallet.transaction import Transaction
 from wallet.validation import process_transaction
+from crypto.signer import get_signer
 
 
 def create_transaction(sender, receiver, amount, nonce):
-    return Transaction(
+    # Get the sender's ECDSA keypair
+    keys = sender.keys["ECDSA"]
+    signer = get_signer("ECDSA")
+
+    # Create the transaction
+    transaction = Transaction(
         sender=sender.wallet_id,
         receiver=receiver.wallet_id,
         amount=amount,
         nonce=nonce,
         timestamp="2026-11-03",
         algorithm="ECDSA",
-        public_key="abcd1234",
-        signature="ef567890"
+        public_key=keys["public_key"].hex(),
+        signature=""
     )
+
+    # Sign the serialized transaction
+    transaction.signature = signer.sign(
+        keys["private_key"],
+        transaction.serialize()
+    ).hex()
+
+    return transaction
 
 
 def test_overspending():
