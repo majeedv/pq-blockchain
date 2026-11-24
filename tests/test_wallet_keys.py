@@ -2,11 +2,11 @@ from wallet.wallet import Wallet
 from crypto.signer import get_signer
 
 
-def test_wallet_generates_both_keypairs():
+def test_wallet_generates_ecdsa_keypair():
     wallet = Wallet("Alice", 100)
 
     assert "ECDSA" in wallet.keys
-    assert "ML-DSA-44" in wallet.keys
+    assert len(wallet.keys) == 1
 
 
 def test_wallet_keys_are_bytes():
